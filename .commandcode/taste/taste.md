@@ -1,0 +1,1 @@
+- Prefers the assistant to directly apply proposed code fixes rather than only describe the required changes. Confidence: 0.75

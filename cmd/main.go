@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"charm.land/log/v2"
+	"github.com/chromavisionmusic/columbina/internal/ai"
 	"github.com/chromavisionmusic/columbina/internal/commands"
 	"github.com/chromavisionmusic/columbina/internal/config"
 	botEvents "github.com/chromavisionmusic/columbina/internal/events"
@@ -39,8 +40,15 @@ func main() {
 	// Command handler
 	cmd := handler.New()
 
+	// AI service
+	aiCtx := context.Background()
+	aiService, err := ai.NewService(aiCtx, env)
+	if err != nil {
+		log.Fatalf("Failed to initialize AI service: %v", err)
+	}
+
 	// Event handler
-	eventHandler := botEvents.NewHandler(cfg, env)
+	eventHandler := botEvents.NewHandler(cfg, env, aiService)
 
 	// Create a new client instance
 	client, err := disgo.New(env.Token,
@@ -52,6 +60,7 @@ func main() {
 				gateway.IntentGuilds,
 				gateway.IntentGuildMessages,
 				gateway.IntentDirectMessages,
+				gateway.IntentMessageContent,
 			),
 			// Set presence from config
 			gateway.WithPresenceOpts(utils.GetPresenceOpts(cfg.Bot.Presence)...),

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"charm.land/log/v2"
+	"github.com/chromavisionmusic/columbina/internal/ai"
 	"github.com/chromavisionmusic/columbina/internal/config"
 	"github.com/disgoorg/disgo/bot"
 	dgevents "github.com/disgoorg/disgo/events"
@@ -15,9 +16,10 @@ var _ bot.EventListener = (*Handler)(nil)
 type Handler struct {
 	cfg           *config.Config
 	webhookClient *webhook.Client
+	aiService     *ai.Service
 }
 
-func NewHandler(cfg *config.Config, env config.Env) *Handler {
+func NewHandler(cfg *config.Config, env config.Env, aiService *ai.Service) *Handler {
 	var webhookClient *webhook.Client
 
 	if env.EventsWebhook != "" {
@@ -35,6 +37,7 @@ func NewHandler(cfg *config.Config, env config.Env) *Handler {
 	return &Handler{
 		cfg:           cfg,
 		webhookClient: webhookClient,
+		aiService:     aiService,
 	}
 }
 
@@ -42,6 +45,8 @@ func (h *Handler) OnEvent(event bot.Event) {
 	switch e := event.(type) {
 	case *dgevents.GuildJoin:
 		h.OnGuildJoin(e)
+	case *dgevents.MessageCreate:
+		h.OnMessageCreate(e)
 	}
 }
 
