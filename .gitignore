@@ -47,3 +47,6 @@ desktop.ini
 
 # SSH Key
 *.key
+
+ecosystem.config.*
+*.ps1
