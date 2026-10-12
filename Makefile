@@ -19,3 +19,6 @@ test:
 
 clean:
 	@rm -rf $(BIN_DIR)
+
+deploy:
+	@go run cmd/deploy/main.go

@@ -10,6 +10,7 @@ import (
 	"github.com/chromavisionmusic/columbina/internal/config"
 	"google.golang.org/adk/v2/agent"
 	"google.golang.org/adk/v2/agent/llmagent"
+	"google.golang.org/adk/v2/model"
 	"google.golang.org/adk/v2/model/openaimodel"
 	"google.golang.org/adk/v2/runner"
 	"google.golang.org/genai"
@@ -34,10 +35,24 @@ func NewService(ctx context.Context, env config.Env) (*Service, error) {
 		API:     apiType,
 	}
 
-	model, err := openaimodel.NewModel(ctx, env.LLMModel, &cfg)
+	var models []model.LLM
+	primaryModel, err := openaimodel.NewModel(ctx, env.LLMModel, &cfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create OpenAI model: %w", err)
+		return nil, fmt.Errorf("failed to create primary model %q: %w", env.LLMModel, err)
 	}
+	models = append(models, primaryModel)
+
+	for _, fallbackName := range env.LLMFallbackModels {
+		fbModel, err := openaimodel.NewModel(ctx, fallbackName, &cfg)
+		if err != nil {
+			log.Warnf("Failed to initialize fallback model %q: %v", fallbackName, err)
+			continue
+		}
+		log.Infof("Configured fallback model %q on gateway", fallbackName)
+		models = append(models, fbModel)
+	}
+
+	selectedModel := NewFallbackModel(models...)
 
 	// Load persona/system prompt from markdown file
 	promptPath := "prompts/system_prompt.md"
@@ -52,7 +67,7 @@ func NewService(ctx context.Context, env config.Env) (*Service, error) {
 
 	columbinaAgent, err := llmagent.New(llmagent.Config{
 		Name:        "columbina",
-		Model:       model,
+		Model:       selectedModel,
 		Description: "Columbina AI chat companion for Discord.",
 		Instruction: systemPrompt,
 	})

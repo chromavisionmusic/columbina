@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"strings"
 
 	"github.com/disgoorg/snowflake/v2"
 	"github.com/joho/godotenv"
@@ -15,9 +16,10 @@ type Env struct {
 	DatabasePath  string
 	EventsWebhook string
 	LogsWebhook   string
-	LLMBaseUrl    string
-	LLMModel      string
-	LLMApiKey     string
+	LLMBaseUrl        string
+	LLMModel          string
+	LLMApiKey         string
+	LLMFallbackModels []string
 }
 
 func LoadEnv(environment string) Env {
@@ -75,15 +77,26 @@ func LoadEnv(environment string) Env {
 		panic("LLM_API_KEY is required!")
 	}
 
+	fallbackModelsRaw := os.Getenv("LLM_FALLBACK_MODELS")
+	var fallbackModels []string
+	if fallbackModelsRaw != "" {
+		for _, m := range strings.Split(fallbackModelsRaw, ",") {
+			if trimmed := strings.TrimSpace(m); trimmed != "" {
+				fallbackModels = append(fallbackModels, trimmed)
+			}
+		}
+	}
+
 	return Env{
-		Token:         token,
-		GuildId:       snowflake.GetEnv("GUILD_ID"),
-		ChannelId:     snowflake.GetEnv("CHANNEL_ID"),
-		DatabasePath:  dbPath,
-		EventsWebhook: eventsWebhook,
-		LogsWebhook:   logsWebhook,
-		LLMBaseUrl:    llmUrl,
-		LLMModel:      model,
-		LLMApiKey:     llmApiKey,
+		Token:             token,
+		GuildId:           snowflake.GetEnv("GUILD_ID"),
+		ChannelId:         snowflake.GetEnv("CHANNEL_ID"),
+		DatabasePath:      dbPath,
+		EventsWebhook:     eventsWebhook,
+		LogsWebhook:       logsWebhook,
+		LLMBaseUrl:        llmUrl,
+		LLMModel:          model,
+		LLMApiKey:         llmApiKey,
+		LLMFallbackModels: fallbackModels,
 	}
 }
