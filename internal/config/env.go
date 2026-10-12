@@ -11,9 +11,13 @@ import (
 type Env struct {
 	Token         string
 	GuildId       snowflake.ID
+	ChannelId     snowflake.ID
 	DatabasePath  string
 	EventsWebhook string
 	LogsWebhook   string
+	LLMBaseUrl    string
+	LLMModel      string
+	LLMApiKey     string
 }
 
 func LoadEnv(environment string) Env {
@@ -59,11 +63,27 @@ func LoadEnv(environment string) Env {
 		logsWebhook = os.Getenv("LOGS_WEBHOOK")
 	}
 
+	llmUrl := os.Getenv("LLM_BASE_URL")
+
+	model := os.Getenv("LLM_MODEL")
+	if model == "" {
+		panic("LLM_MODEL is required!")
+	}
+
+	llmApiKey := os.Getenv("LLM_API_KEY")
+	if llmApiKey == "" {
+		panic("LLM_API_KEY is required!")
+	}
+
 	return Env{
 		Token:         token,
 		GuildId:       snowflake.GetEnv("GUILD_ID"),
+		ChannelId:     snowflake.GetEnv("CHANNEL_ID"),
 		DatabasePath:  dbPath,
 		EventsWebhook: eventsWebhook,
 		LogsWebhook:   logsWebhook,
+		LLMBaseUrl:    llmUrl,
+		LLMModel:      model,
+		LLMApiKey:     llmApiKey,
 	}
 }
