@@ -1,0 +1,22 @@
+bot:
+  name: "Columbina"
+  description: "I'm Columbina, the Damselette. A little moonlight, a little mystery, and an AI companion to make your Discord experience special."
+  version: "0.1.0"
+  color: "#9c3f73"
+  owner:
+    id: "1063860912173359114"
+    name: "chromavisionmusic"
+  designer:
+    id: "758254880770490378"
+    name: "hanakitty3"
+
+  links:
+    invite: "https://discord.com/oauth2/authorize?client_id=1556011663688339537&permissions=275414912000&integration_type=0&scope=bot+applications.commands"
+    website:
+    server: "https://discord.gg/moonmaiden"
+    github: "https://github.com/chromavisionmusic/columbina"
+
+  presence:
+    status: "idle"
+    activity_type: "listening"
+    activity: "Song of the Welkin Moon | v0.1.0"
