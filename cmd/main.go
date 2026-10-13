@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -23,13 +24,36 @@ import (
 	"github.com/disgoorg/snowflake/v2"
 )
 
-func main() {
-	var environment string
+func parseEnvironment(args []string) (string, error) {
+	if len(args) < 2 {
+		return "", fmt.Errorf("environment not specified")
+	}
+	return args[1], nil
+}
 
-	if len(os.Args) < 2 {
-		log.Fatal("Environment not specified")
-	} else {
-		environment = os.Args[1]
+func buildGuildInstallFallback(cmds []discord.ApplicationCommandCreate) []discord.ApplicationCommandCreate {
+	fallbackCmds := make([]discord.ApplicationCommandCreate, len(cmds))
+	for i, c := range cmds {
+		if slash, ok := c.(discord.SlashCommandCreate); ok {
+			slash.IntegrationTypes = []discord.ApplicationIntegrationType{
+				discord.ApplicationIntegrationTypeGuildInstall,
+			}
+			slash.Contexts = []discord.InteractionContextType{
+				discord.InteractionContextTypeGuild,
+				discord.InteractionContextTypeBotDM,
+			}
+			fallbackCmds[i] = slash
+		} else {
+			fallbackCmds[i] = c
+		}
+	}
+	return fallbackCmds
+}
+
+func main() {
+	environment, err := parseEnvironment(os.Args)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	env := config.LoadEnv(environment)
@@ -86,21 +110,7 @@ func main() {
 	// Therefore, we sync commands globally so they work in both DMs and servers.
 	if err := handler.SyncCommands(client, commands.Commands, nil); err != nil {
 		log.Warnf("Failed to sync global commands with UserInstall; retrying with GuildInstall: %v", err)
-		fallbackCmds := make([]discord.ApplicationCommandCreate, len(commands.Commands))
-		for i, c := range commands.Commands {
-			if slash, ok := c.(discord.SlashCommandCreate); ok {
-				slash.IntegrationTypes = []discord.ApplicationIntegrationType{
-					discord.ApplicationIntegrationTypeGuildInstall,
-				}
-				slash.Contexts = []discord.InteractionContextType{
-					discord.InteractionContextTypeGuild,
-					discord.InteractionContextTypeBotDM,
-				}
-				fallbackCmds[i] = slash
-			} else {
-				fallbackCmds[i] = c
-			}
-		}
+		fallbackCmds := buildGuildInstallFallback(commands.Commands)
 		if errFallback := handler.SyncCommands(client, fallbackCmds, nil); errFallback != nil {
 			log.Errorf("Failed to sync global commands: %v", errFallback)
 		} else {
