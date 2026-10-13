@@ -14,6 +14,7 @@ import (
 	dgevents "github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/disgo/rest"
+	"github.com/disgoorg/snowflake/v2"
 )
 
 func TestAboutCommandMetadata(t *testing.T) {
@@ -61,7 +62,18 @@ func TestAboutCommandHandler_Full(t *testing.T) {
 	}
 
 	gw := &mockGateway{latency: 25 * time.Millisecond}
-	c := cache.New()
+	c := cache.New(cache.WithCaches(cache.FlagGuilds, cache.FlagMembers))
+	avatar := "a_123456"
+	c.SetSelfUser(discord.OAuth2User{
+		User: discord.User{
+			ID:     snowflake.ID(1001),
+			Avatar: &avatar,
+		},
+	})
+	c.GuildCache().Put(snowflake.ID(2001), discord.Guild{
+		ID:          snowflake.ID(2001),
+		MemberCount: 150,
+	})
 	client := &bot.Client{
 		Gateway: gw,
 		Caches:  c,
@@ -123,6 +135,15 @@ func TestAboutCommandHandler_Full(t *testing.T) {
 		fieldsMap[f.Name] = f.Value
 	}
 
+	if embed.Thumbnail == nil || !strings.Contains(embed.Thumbnail.URL, "a_123456") {
+		t.Errorf("Thumbnail = %+v, want avatar containing a_123456", embed.Thumbnail)
+	}
+	if fieldsMap["Guilds"] != "1" {
+		t.Errorf("Guilds field = %q, want '1'", fieldsMap["Guilds"])
+	}
+	if fieldsMap["Users"] != "150" {
+		t.Errorf("Users field = %q, want '150'", fieldsMap["Users"])
+	}
 	if fieldsMap["Version"] != "2.1.0" {
 		t.Errorf("Version field = %q, want '2.1.0'", fieldsMap["Version"])
 	}
@@ -154,8 +175,17 @@ func TestAboutCommandHandler_NoLinks(t *testing.T) {
 	}
 
 	h := AboutCommandHandler(cfg)
+	c := cache.New(cache.WithCaches(cache.FlagGuilds, cache.FlagMembers))
+	c.GuildCache().Put(snowflake.ID(3001), discord.Guild{
+		ID:          snowflake.ID(3001),
+		MemberCount: 0,
+	})
+	c.MemberCache().Put(snowflake.ID(3001), snowflake.ID(4001), discord.Member{
+		GuildID: snowflake.ID(3001),
+		User:    discord.User{ID: snowflake.ID(4001)},
+	})
 	client := &bot.Client{
-		Caches: cache.New(),
+		Caches: c,
 	}
 
 	var capturedResponse discord.MessageCreate
@@ -191,11 +221,14 @@ func TestAboutCommandHandler_NoLinks(t *testing.T) {
 		t.Errorf("expected 0 components when links are empty, got %d", len(capturedResponse.Components))
 	}
 
-	// Check ping is 0ms when no gateway
+	// Check ping is 0ms when no gateway, and Users is 1 from MembersAllLen fallback
 	if len(capturedResponse.Embeds) > 0 {
 		for _, f := range capturedResponse.Embeds[0].Fields {
 			if f.Name == "Ping" && f.Value != "0ms" {
 				t.Errorf("expected Ping 0ms without gateway, got %q", f.Value)
+			}
+			if f.Name == "Users" && f.Value != "1" {
+				t.Errorf("expected Users 1 from MembersAllLen fallback, got %q", f.Value)
 			}
 		}
 	}
