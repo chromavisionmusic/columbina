@@ -24,7 +24,7 @@ fmt:
 	@gofmt -w -s .
 
 fmt-check:
-	@test -z "$$(gofmt -l .)" || (echo "Unformatted files found:" && gofmt -l . && exit 1)
+	@test -z "$$(gofmt -l -s .)" || (echo "Unformatted files found:" && gofmt -l -s . && exit 1)
 
 lint:
 	@golangci-lint run ./...
