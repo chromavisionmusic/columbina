@@ -1,3 +1,5 @@
+<div align="center">
+
 # Columbina
 
 [![Invite Columbina](https://img.shields.io/badge/Invite-Columbina-9c3f73?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/oauth2/authorize?client_id=1407769283148251248)
@@ -5,11 +7,19 @@
 [![GitHub](https://img.shields.io/badge/GitHub-columbina-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/chromavisionmusic/columbina)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=for-the-badge)](LICENSE)
 
-> *"The moon watches over all things in quiet repose..."*
+<br/>
 
-**Columbina** is an AI companion for Discord inspired by Columbina Hyposelenia (*Genshin Impact*). Gentle, curious, and composed, she brings thoughtful conversation, deep knowledge, and serene charm to your servers and direct messages.
+*"The moon watches over all things in quiet repose..."*
 
-Whether you are looking to discuss Teyvat lore, need help untangling math and study problems, or simply want someone pleasant to talk to, Columbina is here to listen and assist.
+<br/>
+
+**Columbina** is an AI companion for Discord inspired by Columbina Hyposelenia (*Genshin Impact*).<br/>
+Gentle, curious, and composed, she brings thoughtful conversation, deep knowledge, and serene charm to your servers and direct messages.
+
+Whether you are looking to discuss Teyvat lore, need help untangling math and study problems,<br/>
+or simply want someone pleasant to talk to, Columbina is here to listen and assist.
+
+</div>
 
 ---
 
