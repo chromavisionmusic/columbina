@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"fmt"
+	"iter"
 	"os"
 	"strings"
 
@@ -125,6 +126,69 @@ func NewService(ctx context.Context, env config.Env) (*Service, error) {
 		runner:         r,
 		sessionService: sessionService,
 		searchClient:   searchClient,
+	}, nil
+}
+
+// MockLLM provides a mock model.LLM implementation for testing.
+type MockLLM struct {
+	ModelName string
+	Responses []*model.LLMResponse
+	Err       error
+}
+
+func (m *MockLLM) Name() string {
+	if m.ModelName != "" {
+		return m.ModelName
+	}
+	return "mock-llm"
+}
+
+func (m *MockLLM) GenerateContent(ctx context.Context, req *model.LLMRequest, stream bool) iter.Seq2[*model.LLMResponse, error] {
+	return func(yield func(*model.LLMResponse, error) bool) {
+		if m.Err != nil {
+			yield(nil, m.Err)
+			return
+		}
+		for _, r := range m.Responses {
+			if !yield(r, nil) {
+				return
+			}
+		}
+	}
+}
+
+// NewTestService creates an in-memory Service instance with the given model and session service.
+// This is used for unit testing across packages without requiring live API keys.
+func NewTestService(m model.LLM, sess session.Service) (*Service, error) {
+	columbinaAgent, err := llmagent.New(llmagent.Config{
+		Name:        "columbina",
+		Model:       m,
+		Description: "Columbina AI test companion",
+		Instruction: "test instruction",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create llmagent: %w", err)
+	}
+
+	if sess == nil {
+		sess = session.InMemoryService()
+	}
+
+	r, err := runner.New(runner.Config{
+		AppName:           "columbina-bot",
+		Agent:             columbinaAgent,
+		SessionService:    sess,
+		ArtifactService:   artifact.InMemoryService(),
+		MemoryService:     memory.InMemoryService(),
+		AutoCreateSession: true,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create runner: %w", err)
+	}
+
+	return &Service{
+		runner:         r,
+		sessionService: sess,
 	}, nil
 }
 

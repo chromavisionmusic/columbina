@@ -286,3 +286,46 @@ func TestNewService_Initialization(t *testing.T) {
 		}
 	})
 }
+
+func TestMockLLM(t *testing.T) {
+	mDefault := &MockLLM{}
+	if mDefault.Name() != "mock-llm" {
+		t.Errorf("expected 'mock-llm', got %q", mDefault.Name())
+	}
+
+	mNamed := &MockLLM{ModelName: "custom-model"}
+	if mNamed.Name() != "custom-model" {
+		t.Errorf("expected 'custom-model', got %q", mNamed.Name())
+	}
+}
+
+func TestNewTestService(t *testing.T) {
+	llm := &MockLLM{ModelName: "test-model"}
+	sess := session.InMemoryService()
+	svc, err := NewTestService(llm, sess)
+	if err != nil {
+		t.Fatalf("NewTestService failed: %v", err)
+	}
+	if svc == nil {
+		t.Fatal("expected non-nil service")
+	}
+}
+
+func TestNewService_FallbackSystemPrompt(t *testing.T) {
+	t.Chdir(t.TempDir())
+	ctx := context.Background()
+	env := config.Env{
+		LLMApiKey:  "test-key",
+		LLMBaseUrl: "https://api.example.com",
+		LLMModel:   "gpt-4o",
+	}
+
+	svc, err := NewService(ctx, env)
+	if err != nil {
+		t.Fatalf("NewService failed: %v", err)
+	}
+	defer svc.Close()
+	if svc == nil {
+		t.Fatal("expected non-nil service")
+	}
+}
