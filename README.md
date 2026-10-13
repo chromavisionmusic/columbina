@@ -4,7 +4,7 @@
 
 [![Invite Columbina](https://img.shields.io/badge/Invite-Columbina-9c3f73?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/oauth2/authorize?client_id=1407769283148251248)
 [![Discord Server](https://img.shields.io/badge/Discord-Moon%20Maiden-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/moonmaiden)
-[![GitHub](https://img.shields.io/badge/GitHub-columbina-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/chromavisionmusic/columbina)
+[![CI](https://img.shields.io/github/actions/workflow/status/chromavisionmusic/columbina/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=white&label=CI)](https://github.com/chromavisionmusic/columbina/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=for-the-badge)](LICENSE)
 
 <br/>
