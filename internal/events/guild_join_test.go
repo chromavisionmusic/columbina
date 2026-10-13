@@ -1,13 +1,21 @@
 package events
 
 import (
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/chromavisionmusic/columbina/internal/config"
+	"github.com/disgoorg/disgo/bot"
+	"github.com/disgoorg/disgo/cache"
 	"github.com/disgoorg/disgo/discord"
 	dgevents "github.com/disgoorg/disgo/events"
+	"github.com/disgoorg/disgo/rest"
+	"github.com/disgoorg/disgo/webhook"
 	"github.com/disgoorg/snowflake/v2"
 )
 
@@ -160,4 +168,123 @@ func TestHandler_OnGuildJoin_NilWebhook(t *testing.T) {
 		},
 	}
 	h.OnGuildJoin(event)
+}
+
+func TestHandler_OnGuildJoin_WithWebhookSuccess(t *testing.T) {
+	capturedBody := make(chan []byte, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		capturedBody <- body
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"id":"1","type":1,"channel_id":"2"}`))
+	}))
+	defer srv.Close()
+
+	webhookClient := webhook.New(snowflake.ID(12345), "mock-token", webhook.WithRestClientConfigOpts(rest.WithURL(srv.URL)))
+	cfg := &config.Config{
+		Bot: config.BotConfig{
+			Name:  "ColumbinaBot",
+			Color: 0x9c3f73,
+		},
+	}
+	h := &Handler{
+		cfg:           cfg,
+		webhookClient: webhookClient,
+	}
+
+	c := cache.New(cache.WithCaches(cache.FlagGuilds, cache.FlagMembers))
+	avatar := "self-avatar-hash"
+	c.SetSelfUser(discord.OAuth2User{
+		User: discord.User{
+			ID:     snowflake.ID(9001),
+			Avatar: &avatar,
+		},
+	})
+	c.GuildCache().Put(snowflake.ID(101), discord.Guild{
+		ID:          snowflake.ID(101),
+		MemberCount: 50,
+	})
+	c.GuildCache().Put(snowflake.ID(102), discord.Guild{
+		ID:          snowflake.ID(102),
+		MemberCount: 150,
+	})
+
+	client := &bot.Client{Caches: c}
+	genericEvent := dgevents.NewGenericEvent(client, 1, 0)
+	genericGuild := &dgevents.GenericGuild{
+		GenericEvent: genericEvent,
+		GuildID:      snowflake.ID(101),
+	}
+
+	event := &dgevents.GuildJoin{
+		GenericGuild: genericGuild,
+		Guild: discord.GatewayGuild{
+			RestGuild: discord.RestGuild{
+				Guild: discord.Guild{
+					ID:          snowflake.ID(101),
+					Name:        "New Guild",
+					MemberCount: 50,
+				},
+			},
+		},
+	}
+
+	h.OnGuildJoin(event)
+
+	select {
+	case body := <-capturedBody:
+		var webhookMsg discord.WebhookMessageCreate
+		if err := json.Unmarshal(body, &webhookMsg); err != nil {
+			t.Fatalf("failed to unmarshal webhook payload: %v", err)
+		}
+		if webhookMsg.Username != "ColumbinaBot" {
+			t.Errorf("Username = %q, want 'ColumbinaBot'", webhookMsg.Username)
+		}
+		if len(webhookMsg.Embeds) != 1 {
+			t.Fatalf("expected 1 embed, got %d", len(webhookMsg.Embeds))
+		}
+		embed := webhookMsg.Embeds[0]
+		if embed.Title != "Joined a new community!" {
+			t.Errorf("embed.Title = %q, want 'Joined a new community!'", embed.Title)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for webhook HTTP request")
+	}
+}
+
+func TestHandler_OnGuildJoin_WithWebhookError(t *testing.T) {
+	requestReceived := make(chan struct{}, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestReceived <- struct{}{}
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"message":"internal error","code":0}`))
+	}))
+	defer srv.Close()
+
+	webhookClient := webhook.New(snowflake.ID(12345), "mock-token", webhook.WithRestClientConfigOpts(rest.WithURL(srv.URL)))
+	h := &Handler{
+		cfg:           &config.Config{},
+		webhookClient: webhookClient,
+	}
+
+	event := &dgevents.GuildJoin{
+		Guild: discord.GatewayGuild{
+			RestGuild: discord.RestGuild{
+				Guild: discord.Guild{
+					ID:   snowflake.ID(200),
+					Name: "Error Guild",
+				},
+			},
+		},
+	}
+
+	h.OnGuildJoin(event)
+
+	select {
+	case <-requestReceived:
+		// Succeeded in exercising error logging path safely
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for webhook error attempt")
+	}
 }

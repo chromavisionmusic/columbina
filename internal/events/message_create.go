@@ -187,12 +187,12 @@ func BuildContext(ctx context.Context, client *bot.Client, msg *discord.Message)
 			authorName = "Columbina"
 		}
 		resolved := ResolveMentions(ctx, client, prev)
-		sb.WriteString(fmt.Sprintf("[%s]: %s\n", authorName, resolved))
+		fmt.Fprintf(&sb, "[%s]: %s\n", authorName, resolved)
 	}
 
 	sb.WriteString("\n[Current message]\n")
 	authorName := msg.Author.EffectiveName()
-	sb.WriteString(fmt.Sprintf("[%s]: %s", authorName, currentResolved))
+	fmt.Fprintf(&sb, "[%s]: %s", authorName, currentResolved)
 
 	return sb.String()
 }
