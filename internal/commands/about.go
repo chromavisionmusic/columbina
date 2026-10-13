@@ -53,7 +53,9 @@ func AboutCommandHandler(cfg *config.Config) handler.SlashCommandHandler {
 			AddField("Uptime", fmt.Sprintf("<t:%d:R>", startTime.Unix()), true).
 			AddField("Users", fmt.Sprintf("%d", users), true).
 			AddField("Guilds", fmt.Sprintf("%d", guilds), true).
-			AddField("Commands", fmt.Sprintf("%d", len(Commands)), true)
+			AddField("Commands", fmt.Sprintf("%d", len(Commands)), true).
+			AddField("Developed by", fmt.Sprintf("[%s](%s)", cfg.Bot.Owner.Name, fmt.Sprintf("https://discord.com/users/%s", cfg.Bot.Owner.ID)), true).
+			AddField("Designed by", fmt.Sprintf("[%s](%s)", cfg.Bot.Designer.Name, fmt.Sprintf("https://discord.com/users/%s", cfg.Bot.Designer.ID)), true)
 
 		var buttons []discord.InteractiveComponent
 		if link := strings.TrimSpace(cfg.Bot.Links.Invite); link != "" {
