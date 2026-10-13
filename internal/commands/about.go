@@ -78,7 +78,7 @@ func AboutCommandHandler(cfg *config.Config) handler.SlashCommandHandler {
 		}
 
 		msg := discord.MessageCreate{
-			Content: fmt.Sprintf("-# <:INFO:1558891003874910259> Interested in contributing to the project? Checkout out the [Github](%s) repo and give it a star.", cfg.Bot.Links.Github),
+			Content: fmt.Sprintf("-# <:INFO:1559580206401069168> Interested in contributing to the project? Checkout out the [Github](%s) repo and give it a star.", cfg.Bot.Links.Github),
 			Embeds:  []discord.Embed{embed},
 		}
 		if len(buttons) > 0 {
