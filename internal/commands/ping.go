@@ -26,7 +26,7 @@ var PingCommandMetadata = discord.SlashCommandCreate{
 func PingCommandHandler(cfg *config.Config) handler.SlashCommandHandler {
 	return func(data discord.SlashCommandInteractionData, e *handler.CommandEvent) error {
 		apiLatency := e.Client().Gateway.Latency()
-		botLatency := time.Since(e.ApplicationCommandInteraction.CreatedAt())
+		botLatency := time.Since(e.CreatedAt())
 
 		embed := discord.NewEmbed().
 			WithTitle("Pong!").
