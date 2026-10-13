@@ -11,17 +11,23 @@ import (
 	"github.com/disgoorg/disgo"
 )
 
-func main() {
-	environment := "production"
-	if len(os.Args) > 1 {
-		environment = os.Args[1]
-	} else if env := os.Getenv("ENV"); env != "" {
-		environment = env
-	} else if _, err := os.Stat(".env"); os.IsNotExist(err) {
+func resolveEnvironment(args []string) string {
+	if len(args) > 1 {
+		return args[1]
+	}
+	if env := os.Getenv("ENV"); env != "" {
+		return env
+	}
+	if _, err := os.Stat(".env"); os.IsNotExist(err) {
 		if _, err := os.Stat(".env.development"); err == nil {
-			environment = "development"
+			return "development"
 		}
 	}
+	return "production"
+}
+
+func main() {
+	environment := resolveEnvironment(os.Args)
 
 	log.Infof("Deploying commands globally in %s environment...", environment)
 
