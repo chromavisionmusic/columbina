@@ -229,7 +229,9 @@ func (c *Client) Search(ctx context.Context, query string) (SearchResult, error)
 	if err != nil {
 		return SearchResult{Query: query}, fmt.Errorf("tavily request failed: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() {
+		_ = httpResp.Body.Close()
+	}()
 
 	bodyBytes, err := io.ReadAll(io.LimitReader(httpResp.Body, 1<<20))
 	if err != nil {
