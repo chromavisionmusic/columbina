@@ -107,6 +107,15 @@ make build
 
 # Run tests
 make test
+
+# Run tests with race detector and coverage
+make test-race
+
+# Check and fix code formatting
+make fmt
+
+# Run static analysis and linting
+make lint
 ```
 
 Or using the Go toolchain directly:
@@ -122,7 +131,8 @@ go run cmd/main.go development
 
 ### Code Style & Formatting
 
-- Follow standard Go formatting with `gofmt` and `goimports`.
+- Follow standard Go formatting with `gofmt -s` (`make fmt`).
+- Ensure code passes `golangci-lint` (`make lint`).
 - Run `go vet ./...` to check for common mistakes.
 - Write readable, maintainable, and idiomatic Go code.
 
@@ -155,8 +165,10 @@ docs: update setup instructions in contributing guide
 
 Before opening your pull request, please ensure:
 
-- [ ] Code compiles without warnings (`go build ./...`).
-- [ ] Code is formatted with `gofmt`.
+- [ ] Code compiles without errors (`go build ./...` or `make build`).
+- [ ] Code is formatted with `gofmt` (`make fmt` or `gofmt -l -s .`).
+- [ ] Linters pass cleanly without warnings (`make lint` or `golangci-lint run`).
 - [ ] Tests pass locally (`make test` or `go test ./...`).
 - [ ] No secrets, private credentials, or live API tokens are committed.
+- [ ] All GitHub Actions CI checks (`.github/workflows/ci.yml`) pass.
 - [ ] The PR description clearly explains the changes and references any related issue.

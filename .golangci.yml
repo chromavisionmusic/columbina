@@ -1,0 +1,19 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: standard
+  settings:
+    govet:
+      disable:
+        - fieldalignment
+        - shadow
+    errcheck:
+      check-type-assertions: true
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

@@ -2,7 +2,7 @@ BIN_DIR := build
 BIN_NAME := bot
 BOT_SRC := cmd/main.go
 
-.PHONY: build run dev test clean
+.PHONY: build run dev test test-race lint fmt fmt-check clean deploy
 
 build:
 	@mkdir -p $(BIN_DIR)
@@ -16,6 +16,18 @@ dev: build
 
 test:
 	@go test -v ./...
+
+test-race:
+	@go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+
+fmt:
+	@gofmt -w -s .
+
+fmt-check:
+	@test -z "$$(gofmt -l .)" || (echo "Unformatted files found:" && gofmt -l . && exit 1)
+
+lint:
+	@golangci-lint run ./...
 
 clean:
 	@rm -rf $(BIN_DIR)
