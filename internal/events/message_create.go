@@ -60,7 +60,7 @@ func ShouldRespond(client *bot.Client, msg *discord.Message) bool {
 			return true
 		}
 		// If ReferencedMessage wasn't inlined, check via REST
-		if msg.ReferencedMessage == nil {
+		if msg.ReferencedMessage == nil && client.Rest != nil {
 			if ref, err := client.Rest.GetMessage(msg.ChannelID, *msg.MessageReference.MessageID); err == nil && ref != nil {
 				if ref.Author.ID == botID {
 					return true
@@ -116,7 +116,7 @@ func ResolveMentions(ctx context.Context, client *bot.Client, msg *discord.Messa
 		}
 
 		// Fetch via REST as fallback
-		if client != nil {
+		if client != nil && client.Rest != nil {
 			if u, err := client.Rest.GetUser(sfID); err == nil && u != nil {
 				return "@" + u.EffectiveName()
 			}
@@ -151,12 +151,14 @@ func TraverseReplyChain(ctx context.Context, client *bot.Client, msg *discord.Me
 		var parentMsg *discord.Message
 		if current.ReferencedMessage != nil && current.ReferencedMessage.ID == parentID {
 			parentMsg = current.ReferencedMessage
-		} else {
+		} else if client.Rest != nil {
 			fetched, err := client.Rest.GetMessage(current.ChannelID, parentID)
 			if err != nil || fetched == nil {
 				break
 			}
 			parentMsg = fetched
+		} else {
+			break
 		}
 
 		chain = append(chain, parentMsg)
