@@ -119,6 +119,7 @@ func main() {
 	defer func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
+		aiService.Close()
 		eventHandler.Close(ctx)
 		client.Close(ctx)
 	}()

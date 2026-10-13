@@ -8,6 +8,7 @@ import (
 
 	"charm.land/log/v2"
 	"github.com/chromavisionmusic/columbina/internal/config"
+	"github.com/chromavisionmusic/columbina/internal/search"
 	"google.golang.org/adk/v2/agent"
 	"google.golang.org/adk/v2/agent/llmagent"
 	"google.golang.org/adk/v2/artifact"
@@ -16,6 +17,7 @@ import (
 	"google.golang.org/adk/v2/model/openaimodel"
 	"google.golang.org/adk/v2/runner"
 	"google.golang.org/adk/v2/session"
+	"google.golang.org/adk/v2/tool"
 	"google.golang.org/genai"
 )
 
@@ -23,6 +25,7 @@ import (
 type Service struct {
 	runner         *runner.Runner
 	sessionService session.Service
+	searchClient   *search.Client
 }
 
 // NewService initializes the AI model, agent, and runner using the provided environment configuration.
@@ -61,6 +64,15 @@ func NewService(ctx context.Context, env config.Env) (*Service, error) {
 	// Load persona/system prompt from markdown file
 	promptPath := "prompts/system_prompt.md"
 	systemPromptBytes, err := os.ReadFile(promptPath)
+	if err != nil {
+		for _, altPath := range []string{"../../prompts/system_prompt.md", "../prompts/system_prompt.md"} {
+			if b, altErr := os.ReadFile(altPath); altErr == nil {
+				systemPromptBytes = b
+				err = nil
+				break
+			}
+		}
+	}
 	var systemPrompt string
 	if err != nil {
 		log.Warnf("Could not read %s, using fallback prompt: %v", promptPath, err)
@@ -69,11 +81,28 @@ func NewService(ctx context.Context, env config.Env) (*Service, error) {
 		systemPrompt = string(systemPromptBytes)
 	}
 
+	// Initialize tools (Tavily web search)
+	var tools []tool.Tool
+	var searchClient *search.Client
+	if strings.TrimSpace(env.TavilyApiKey) != "" {
+		searchClient = search.NewClient(env.TavilyApiKey)
+		searchTool, err := searchClient.AsTool()
+		if err != nil {
+			log.Warnf("Failed to initialize Tavily web search tool: %v", err)
+		} else {
+			tools = append(tools, searchTool)
+			log.Info("Autonomous web search tool initialized (Tavily)")
+		}
+	} else {
+		log.Warn("TAVILY_API_KEY is not set or empty; running with web search disabled")
+	}
+
 	columbinaAgent, err := llmagent.New(llmagent.Config{
 		Name:        "columbina",
 		Model:       selectedModel,
 		Description: "Columbina AI chat companion for Discord.",
 		Instruction: systemPrompt,
+		Tools:       tools,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create llmagent: %w", err)
@@ -95,7 +124,20 @@ func NewService(ctx context.Context, env config.Env) (*Service, error) {
 	return &Service{
 		runner:         r,
 		sessionService: sessionService,
+		searchClient:   searchClient,
 	}, nil
+}
+
+// Close releases resources held by the AI service (such as search cache cleanup).
+func (s *Service) Close() {
+	if s.searchClient != nil {
+		s.searchClient.Close()
+	}
+}
+
+// HasSearch reports whether autonomous web search is enabled.
+func (s *Service) HasSearch() bool {
+	return s.searchClient != nil
 }
 
 // SessionIDForGuild returns the session ID used for guild-based conversations.

@@ -20,6 +20,7 @@ type Env struct {
 	LLMModel          string
 	LLMApiKey         string
 	LLMFallbackModels []string
+	TavilyApiKey      string
 }
 
 func LoadEnv(environment string) Env {
@@ -87,6 +88,8 @@ func LoadEnv(environment string) Env {
 		}
 	}
 
+	tavilyApiKey := os.Getenv("TAVILY_API_KEY")
+
 	return Env{
 		Token:             token,
 		GuildId:           snowflake.GetEnv("GUILD_ID"),
@@ -98,5 +101,6 @@ func LoadEnv(environment string) Env {
 		LLMModel:          model,
 		LLMApiKey:         llmApiKey,
 		LLMFallbackModels: fallbackModels,
+		TavilyApiKey:      tavilyApiKey,
 	}
 }
