@@ -10,12 +10,12 @@ import (
 )
 
 type Env struct {
-	Token         string
-	GuildId       snowflake.ID
-	ChannelId     snowflake.ID
-	DatabasePath  string
-	EventsWebhook string
-	LogsWebhook   string
+	Token             string
+	GuildId           snowflake.ID
+	ChannelId         snowflake.ID
+	DatabasePath      string
+	EventsWebhook     string
+	LogsWebhook       string
 	LLMBaseUrl        string
 	LLMModel          string
 	LLMApiKey         string
@@ -26,9 +26,9 @@ type Env struct {
 func LoadEnv(environment string) Env {
 	switch environment {
 	case "production", "prod":
-		godotenv.Load(".env")
+		_ = godotenv.Load(".env")
 	case "development", "dev":
-		godotenv.Load(".env.development")
+		_ = godotenv.Load(".env.development")
 	default:
 		log.Fatalf("Unknown environment: %s", environment)
 	}
@@ -49,11 +49,6 @@ func LoadEnv(environment string) Env {
 	}
 	if dbPath == "" {
 		dbPath = "data/columbina.db"
-	}
-
-	logLevel := os.Getenv("LOG_LEVEL")
-	if logLevel == "" {
-		logLevel = "info"
 	}
 
 	eventsWebhook := os.Getenv("BOT_EVENTS_WEBHOOK")
