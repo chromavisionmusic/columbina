@@ -12,6 +12,15 @@ import (
 var PingCommandMetadata = discord.SlashCommandCreate{
 	Name:        "ping",
 	Description: "Check bot latency",
+	IntegrationTypes: []discord.ApplicationIntegrationType{
+		discord.ApplicationIntegrationTypeGuildInstall,
+		discord.ApplicationIntegrationTypeUserInstall,
+	},
+	Contexts: []discord.InteractionContextType{
+		discord.InteractionContextTypeGuild,
+		discord.InteractionContextTypeBotDM,
+		discord.InteractionContextTypePrivateChannel,
+	},
 }
 
 func PingCommandHandler(cfg *config.Config) handler.SlashCommandHandler {

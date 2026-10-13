@@ -10,15 +10,19 @@ import (
 	"github.com/chromavisionmusic/columbina/internal/config"
 	"google.golang.org/adk/v2/agent"
 	"google.golang.org/adk/v2/agent/llmagent"
+	"google.golang.org/adk/v2/artifact"
+	"google.golang.org/adk/v2/memory"
 	"google.golang.org/adk/v2/model"
 	"google.golang.org/adk/v2/model/openaimodel"
 	"google.golang.org/adk/v2/runner"
+	"google.golang.org/adk/v2/session"
 	"google.golang.org/genai"
 )
 
-// Service encapsulates the ADK Go v2 Agent and Runner.
+// Service encapsulates the ADK Go v2 Agent, Runner, and SessionService.
 type Service struct {
-	runner *runner.Runner
+	runner         *runner.Runner
+	sessionService session.Service
 }
 
 // NewService initializes the AI model, agent, and runner using the provided environment configuration.
@@ -75,24 +79,50 @@ func NewService(ctx context.Context, env config.Env) (*Service, error) {
 		return nil, fmt.Errorf("failed to create llmagent: %w", err)
 	}
 
-	r, err := runner.NewInMemory("columbina-bot", columbinaAgent)
+	sessionService := session.InMemoryService()
+	r, err := runner.New(runner.Config{
+		AppName:           "columbina-bot",
+		Agent:             columbinaAgent,
+		SessionService:    sessionService,
+		ArtifactService:   artifact.InMemoryService(),
+		MemoryService:     memory.InMemoryService(),
+		AutoCreateSession: true,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ADK runner: %w", err)
 	}
 
 	return &Service{
-		runner: r,
+		runner:         r,
+		sessionService: sessionService,
 	}, nil
 }
 
-// Ask sends a prompt to the agent under a specific user's session and returns the final response.
+// SessionIDForGuild returns the session ID used for guild-based conversations.
+func SessionIDForGuild(userID string) string {
+	return fmt.Sprintf("user_%s", userID)
+}
+
+// SessionIDForDM returns the session ID used for private DM conversations.
+func SessionIDForDM(userID string) string {
+	return fmt.Sprintf("dm_user_%s", userID)
+}
+
+// Ask sends a prompt to the agent under a user's guild session and returns the final response.
 func (s *Service) Ask(ctx context.Context, userID, prompt string) (string, error) {
+	return s.AskSession(ctx, SessionIDForGuild(userID), userID, prompt)
+}
+
+// AskDM sends a prompt to the agent under a user's isolated DM session and returns the final response.
+func (s *Service) AskDM(ctx context.Context, userID, prompt string) (string, error) {
+	return s.AskSession(ctx, SessionIDForDM(userID), userID, prompt)
+}
+
+// AskSession sends a prompt to the agent under a specific session and returns the final response.
+func (s *Service) AskSession(ctx context.Context, sessionID, userID, prompt string) (string, error) {
 	userContent := genai.NewContentFromParts([]*genai.Part{
 		genai.NewPartFromText(prompt),
 	}, genai.RoleUser)
-
-	// Session is isolated per user
-	sessionID := fmt.Sprintf("user_%s", userID)
 
 	var responseBuilder strings.Builder
 	for event, err := range s.runner.Run(ctx, userID, sessionID, userContent, agent.RunConfig{}) {
@@ -114,4 +144,21 @@ func (s *Service) Ask(ctx context.Context, userID, prompt string) (string, error
 		return "...", nil
 	}
 	return result, nil
+}
+
+// ResetSession clears a specific session from memory.
+func (s *Service) ResetSession(ctx context.Context, userID, sessionID string) error {
+	if s.sessionService == nil {
+		return nil
+	}
+	return s.sessionService.Delete(ctx, &session.DeleteRequest{
+		AppName:   "columbina-bot",
+		UserID:    userID,
+		SessionID: sessionID,
+	})
+}
+
+// ResetDMSession clears a user's DM session from memory.
+func (s *Service) ResetDMSession(ctx context.Context, userID string) error {
+	return s.ResetSession(ctx, userID, SessionIDForDM(userID))
 }

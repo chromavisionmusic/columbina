@@ -17,14 +17,24 @@ import (
 
 var userMentionRegex = regexp.MustCompile(`<@!?(\d+)>`)
 
-// ShouldRespond checks if the incoming message is a reply to the bot or mentions the bot.
+// ShouldRespond checks if the incoming message is a reply to the bot, mentions the bot,
+// or was received directly in DMs.
 func ShouldRespond(client *bot.Client, msg *discord.Message) bool {
-	if client == nil || msg == nil {
+	if msg == nil {
 		return false
 	}
 
 	// Ignore bots and webhooks
 	if msg.Author.Bot || msg.WebhookID != nil {
+		return false
+	}
+
+	// In Direct Messages (DMs), the bot should always respond
+	if msg.GuildID == nil {
+		return true
+	}
+
+	if client == nil {
 		return false
 	}
 
@@ -239,6 +249,49 @@ func (h *Handler) OnMessageCreate(e *dgevents.MessageCreate) {
 		return
 	}
 
+	isDM := e.Message.GuildID == nil
+
+	// Handle direct text commands in DMs (e.g. /reset, !reset, reset, /ping, !ping)
+	if isDM {
+		contentLower := strings.ToLower(strings.TrimSpace(e.Message.Content))
+		switch contentLower {
+		case "/reset", "!reset", "reset":
+			go func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+
+				_ = h.aiService.ResetDMSession(ctx, e.Message.Author.ID.String())
+
+				embed := discord.NewEmbed().
+					WithTitle("Memory Reset").
+					WithDescription("My memories of our previous conversation have gently faded into the moonlight. What shall we talk about now?").
+					WithColor(h.cfg.ColorInt()).
+					WithTimestamp(time.Now())
+
+				msg := discord.NewMessageCreate().WithEmbeds(embed)
+				_, _ = e.Client().Rest.CreateMessage(e.ChannelID, msg)
+			}()
+			return
+
+		case "/ping", "!ping":
+			go func() {
+				var apiLatency int64
+				if e.Client().HasGateway() && e.Client().Gateway != nil {
+					apiLatency = e.Client().Gateway.Latency().Milliseconds()
+				}
+				embed := discord.NewEmbed().
+					WithTitle("Pong!").
+					WithColor(h.cfg.ColorInt()).
+					AddField("API Latency", fmt.Sprintf("`%dms`", apiLatency), true).
+					WithTimestamp(time.Now())
+
+				msg := discord.NewMessageCreate().WithEmbeds(embed)
+				_, _ = e.Client().Rest.CreateMessage(e.ChannelID, msg)
+			}()
+			return
+		}
+	}
+
 	go func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
@@ -265,8 +318,14 @@ func (h *Handler) OnMessageCreate(e *dgevents.MessageCreate) {
 		// Build prompt context from reply chain and resolved mentions
 		prompt := BuildContext(ctx, e.Client(), &e.Message)
 
-		// Execute ADK runner under the user's isolated session
-		reply, err := h.aiService.Ask(ctx, e.Message.Author.ID.String(), prompt)
+		// Execute ADK runner under the user's isolated session (DM vs Guild)
+		var reply string
+		var err error
+		if isDM {
+			reply, err = h.aiService.AskDM(ctx, e.Message.Author.ID.String(), prompt)
+		} else {
+			reply, err = h.aiService.Ask(ctx, e.Message.Author.ID.String(), prompt)
+		}
 		if err != nil {
 			log.Errorf("Failed to generate AI response for user %s: %v", e.Message.Author.ID, err)
 			reply = "I'm sorry, I wandered into the shadows for a moment and couldn't process that. Please try again."
@@ -278,10 +337,12 @@ func (h *Handler) OnMessageCreate(e *dgevents.MessageCreate) {
 			return
 		}
 
-		// Send first chunk as an inline reply to the triggering message
-		firstMsg := discord.NewMessageCreate().
-			WithContent(chunks[0]).
-			WithMessageReferenceByID(e.MessageID)
+		// In DMs, deliver response as standard direct messages without quote reply.
+		// In guild channels, send first chunk as an inline reply to the triggering message.
+		firstMsg := discord.NewMessageCreate().WithContent(chunks[0])
+		if !isDM {
+			firstMsg = firstMsg.WithMessageReferenceByID(e.MessageID)
+		}
 
 		_, err = e.Client().Rest.CreateMessage(e.ChannelID, firstMsg)
 		if err != nil {

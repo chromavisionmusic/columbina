@@ -15,6 +15,15 @@ var startTime = time.Now()
 var AboutCommandMetadata = discord.SlashCommandCreate{
 	Name:        "about",
 	Description: "Information about columbina",
+	IntegrationTypes: []discord.ApplicationIntegrationType{
+		discord.ApplicationIntegrationTypeGuildInstall,
+		discord.ApplicationIntegrationTypeUserInstall,
+	},
+	Contexts: []discord.InteractionContextType{
+		discord.InteractionContextTypeGuild,
+		discord.InteractionContextTypeBotDM,
+		discord.InteractionContextTypePrivateChannel,
+	},
 }
 
 func AboutCommandHandler(cfg *config.Config) handler.SlashCommandHandler {

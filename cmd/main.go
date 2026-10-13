@@ -16,6 +16,7 @@ import (
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/cache"
+	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/disgo/gateway"
 	"github.com/disgoorg/disgo/handler"
@@ -78,17 +79,41 @@ func main() {
 		panic(err)
 	}
 
-	commands.LoadCommands(cmd, cfg)
+	commands.LoadCommands(cmd, cfg, aiService)
 
-	var guildIDs []snowflake.ID
-	if environment == "development" || environment == "dev" {
-		guildIDs = []snowflake.ID{env.GuildId}
+	// In Discord, slash commands in DMs MUST be registered as Global Commands.
+	// Guild commands (synced to a specific server) can NEVER be accessed in DMs.
+	// Therefore, we sync commands globally so they work in both DMs and servers.
+	if err := handler.SyncCommands(client, commands.Commands, nil); err != nil {
+		log.Warnf("Failed to sync global commands with UserInstall; retrying with GuildInstall: %v", err)
+		fallbackCmds := make([]discord.ApplicationCommandCreate, len(commands.Commands))
+		for i, c := range commands.Commands {
+			if slash, ok := c.(discord.SlashCommandCreate); ok {
+				slash.IntegrationTypes = []discord.ApplicationIntegrationType{
+					discord.ApplicationIntegrationTypeGuildInstall,
+				}
+				slash.Contexts = []discord.InteractionContextType{
+					discord.InteractionContextTypeGuild,
+					discord.InteractionContextTypeBotDM,
+				}
+				fallbackCmds[i] = slash
+			} else {
+				fallbackCmds[i] = c
+			}
+		}
+		if errFallback := handler.SyncCommands(client, fallbackCmds, nil); errFallback != nil {
+			log.Errorf("Failed to sync global commands: %v", errFallback)
+		} else {
+			log.Infof("Synced %d global commands with GuildInstall fallback", len(fallbackCmds))
+		}
+	} else {
+		log.Infof("Synced %d global commands", len(commands.Commands))
 	}
 
-	if err := handler.SyncCommands(client, commands.Commands, guildIDs); err != nil {
-		panic(err)
+	// In development, clean up old guild-scoped commands so duplicates don't appear
+	if (environment == "development" || environment == "dev") && env.GuildId != 0 {
+		_ = handler.SyncCommands(client, []discord.ApplicationCommandCreate{}, []snowflake.ID{env.GuildId})
 	}
-	log.Infof("Synced %d commands", len(commands.Commands))
 
 	// Ensure we close the client on exit
 	defer func() {
