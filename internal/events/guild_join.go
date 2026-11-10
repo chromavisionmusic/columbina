@@ -12,7 +12,7 @@ import (
 	"github.com/disgoorg/disgo/rest"
 )
 
-func BuildGuildJoinEmbed(cfg *config.Config, guild discord.GatewayGuild, totalGuilds int, totalUsers int, avatarURL string) discord.Embed {
+func BuildGuildJoinEmbed(cfg *config.Config, guild discord.CacheGuild, totalGuilds int, totalUsers int, avatarURL string) discord.Embed {
 	botName := "columbina"
 	if cfg != nil && cfg.Bot.Name != "" {
 		botName = cfg.Bot.Name
@@ -61,7 +61,7 @@ func BuildGuildJoinEmbed(cfg *config.Config, guild discord.GatewayGuild, totalGu
 	return embed
 }
 
-func BuildWebhookMessage(cfg *config.Config, guild discord.GatewayGuild, totalGuilds int, totalUsers int, avatarURL string) discord.WebhookMessageCreate {
+func BuildWebhookMessage(cfg *config.Config, guild discord.CacheGuild, totalGuilds int, totalUsers int, avatarURL string) discord.WebhookMessageCreate {
 	botName := "columbina"
 	if cfg != nil && cfg.Bot.Name != "" {
 		botName = cfg.Bot.Name

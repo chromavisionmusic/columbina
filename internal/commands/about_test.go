@@ -70,8 +70,8 @@ func TestAboutCommandHandler_Full(t *testing.T) {
 			Avatar: &avatar,
 		},
 	})
-	c.GuildCache().Put(snowflake.ID(2001), discord.Guild{
-		ID:          snowflake.ID(2001),
+	c.GuildCache().Put(snowflake.ID(2001), discord.CacheGuild{
+		Guild:       discord.Guild{ID: snowflake.ID(2001)},
 		MemberCount: 150,
 	})
 	client := &bot.Client{
@@ -176,8 +176,8 @@ func TestAboutCommandHandler_NoLinks(t *testing.T) {
 
 	h := AboutCommandHandler(cfg)
 	c := cache.New(cache.WithCaches(cache.FlagGuilds, cache.FlagMembers))
-	c.GuildCache().Put(snowflake.ID(3001), discord.Guild{
-		ID:          snowflake.ID(3001),
+	c.GuildCache().Put(snowflake.ID(3001), discord.CacheGuild{
+		Guild:       discord.Guild{ID: snowflake.ID(3001)},
 		MemberCount: 0,
 	})
 	c.MemberCache().Put(snowflake.ID(3001), snowflake.ID(4001), discord.Member{

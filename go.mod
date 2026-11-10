@@ -4,7 +4,7 @@ go 1.26.6
 
 require (
 	charm.land/log/v2 v2.0.1
-	github.com/disgoorg/disgo v0.19.6
+	github.com/disgoorg/disgo v0.20.0
 	github.com/disgoorg/snowflake/v2 v2.0.3
 	github.com/joho/godotenv v1.5.1
 	google.golang.org/adk/v2 v2.5.0
@@ -27,7 +27,7 @@ require (
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/coder/websocket v1.8.15 // indirect
-	github.com/disgoorg/godave v0.1.0 // indirect
+	github.com/disgoorg/godave v0.3.0 // indirect
 	github.com/disgoorg/json/v2 v2.0.0 // indirect
 	github.com/disgoorg/omit v1.0.0 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
@@ -42,7 +42,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.20 // indirect
 	github.com/googleapis/gax-go/v2 v2.24.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
-	github.com/klauspost/compress v1.18.4 // indirect
+	github.com/klauspost/compress v1.19.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect
 	github.com/mattn/go-runewidth v0.0.23 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect

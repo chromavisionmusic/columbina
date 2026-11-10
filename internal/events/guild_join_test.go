@@ -19,16 +19,29 @@ import (
 	"github.com/disgoorg/snowflake/v2"
 )
 
+func TestGatewayGuildUnmarshalUnknownChannel(t *testing.T) {
+	const payload = `{"id":"1183188830111682630","channels":[{"id":"1569093965838553272","type":20,"name":"server-hub"}]}`
+
+	var guild discord.GatewayGuild
+	if err := json.Unmarshal([]byte(payload), &guild); err != nil {
+		t.Fatalf("failed to unmarshal guild with unknown channel type: %v", err)
+	}
+	if len(guild.Channels) != 1 {
+		t.Fatalf("expected 1 channel, got %d", len(guild.Channels))
+	}
+	if got := guild.Channels[0].Type(); got != discord.ChannelType(20) {
+		t.Errorf("channel type = %d, want 20", got)
+	}
+}
+
 func TestBuildGuildJoinEmbed_NilConfigAndBasic(t *testing.T) {
-	guild := discord.GatewayGuild{
-		RestGuild: discord.RestGuild{
-			Guild: discord.Guild{
-				ID:          snowflake.New(time.Now()),
-				Name:        "Basic Guild",
-				OwnerID:     snowflake.ID(123456789),
-				MemberCount: 42,
-			},
+	guild := discord.CacheGuild{
+		Guild: discord.Guild{
+			ID:      snowflake.New(time.Now()),
+			Name:    "Basic Guild",
+			OwnerID: snowflake.ID(123456789),
 		},
+		MemberCount: 42,
 	}
 
 	embed := BuildGuildJoinEmbed(nil, guild, 5, 0, "")
@@ -78,19 +91,17 @@ func TestBuildGuildJoinEmbed_Full(t *testing.T) {
 	iconHash := "iconhash123"
 	bannerHash := "bannerhash456"
 
-	guild := discord.GatewayGuild{
-		RestGuild: discord.RestGuild{
-			Guild: discord.Guild{
-				ID:            snowflake.ID(111222333),
-				Name:          "Snezhnaya Realm",
-				OwnerID:       snowflake.ID(999888777),
-				MemberCount:   1500,
-				Description:   &desc,
-				VanityURLCode: &vanity,
-				Icon:          &iconHash,
-				Banner:        &bannerHash,
-			},
+	guild := discord.CacheGuild{
+		Guild: discord.Guild{
+			ID:            snowflake.ID(111222333),
+			Name:          "Snezhnaya Realm",
+			OwnerID:       snowflake.ID(999888777),
+			Description:   &desc,
+			VanityURLCode: &vanity,
+			Icon:          &iconHash,
+			Banner:        &bannerHash,
 		},
+		MemberCount: 1500,
 	}
 
 	avatarURL := "https://cdn.discordapp.com/avatars/bot.png"
@@ -128,12 +139,10 @@ func TestBuildWebhookMessage(t *testing.T) {
 			Name: "Columbina",
 		},
 	}
-	guild := discord.GatewayGuild{
-		RestGuild: discord.RestGuild{
-			Guild: discord.Guild{
-				ID:   snowflake.ID(123),
-				Name: "Guild",
-			},
+	guild := discord.CacheGuild{
+		Guild: discord.Guild{
+			ID:   snowflake.ID(123),
+			Name: "Guild",
 		},
 	}
 
@@ -158,12 +167,10 @@ func TestHandler_OnGuildJoin_NilWebhook(t *testing.T) {
 
 	// Should safely return early without panic
 	event := &dgevents.GuildJoin{
-		Guild: discord.GatewayGuild{
-			RestGuild: discord.RestGuild{
-				Guild: discord.Guild{
-					ID:   snowflake.ID(123),
-					Name: "Guild",
-				},
+		Guild: discord.CacheGuild{
+			Guild: discord.Guild{
+				ID:   snowflake.ID(123),
+				Name: "Guild",
 			},
 		},
 	}
@@ -201,12 +208,12 @@ func TestHandler_OnGuildJoin_WithWebhookSuccess(t *testing.T) {
 			Avatar: &avatar,
 		},
 	})
-	c.GuildCache().Put(snowflake.ID(101), discord.Guild{
-		ID:          snowflake.ID(101),
+	c.GuildCache().Put(snowflake.ID(101), discord.CacheGuild{
+		Guild:       discord.Guild{ID: snowflake.ID(101)},
 		MemberCount: 50,
 	})
-	c.GuildCache().Put(snowflake.ID(102), discord.Guild{
-		ID:          snowflake.ID(102),
+	c.GuildCache().Put(snowflake.ID(102), discord.CacheGuild{
+		Guild:       discord.Guild{ID: snowflake.ID(102)},
 		MemberCount: 150,
 	})
 
@@ -219,14 +226,12 @@ func TestHandler_OnGuildJoin_WithWebhookSuccess(t *testing.T) {
 
 	event := &dgevents.GuildJoin{
 		GenericGuild: genericGuild,
-		Guild: discord.GatewayGuild{
-			RestGuild: discord.RestGuild{
-				Guild: discord.Guild{
-					ID:          snowflake.ID(101),
-					Name:        "New Guild",
-					MemberCount: 50,
-				},
+		Guild: discord.CacheGuild{
+			Guild: discord.Guild{
+				ID:   snowflake.ID(101),
+				Name: "New Guild",
 			},
+			MemberCount: 50,
 		},
 	}
 
@@ -269,12 +274,10 @@ func TestHandler_OnGuildJoin_WithWebhookError(t *testing.T) {
 	}
 
 	event := &dgevents.GuildJoin{
-		Guild: discord.GatewayGuild{
-			RestGuild: discord.RestGuild{
-				Guild: discord.Guild{
-					ID:   snowflake.ID(200),
-					Name: "Error Guild",
-				},
+		Guild: discord.CacheGuild{
+			Guild: discord.Guild{
+				ID:   snowflake.ID(200),
+				Name: "Error Guild",
 			},
 		},
 	}
